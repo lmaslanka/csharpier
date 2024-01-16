@@ -120,8 +120,8 @@ class ClassName
                     : null
         ) { }
 
-        var variableDeclarator = conditionalAccessExpression?.invocationExpression(
-            o => someLongValue___________________________________
+        var variableDeclarator = conditionalAccessExpression?.invocationExpression(o =>
+            someLongValue___________________________________
         );
 
         var variableDeclarator = (CastExpression)
@@ -180,5 +180,17 @@ withLineEnding"
             && someOtheLongCondition___________________________________
                 ? someValue
                 : someValue;
+
+        var someValue =
+            // Some Comment
+            CallSomeMethod()
+                // Another Comment
+                .CallSomeMethod();
+
+        var someValue =
+            // Some Comment
+            (x + y)
+            // Ideally this would be consistent with the previous example, but this is fairly edge case
+            .CallSomeMethod();
     }
 }

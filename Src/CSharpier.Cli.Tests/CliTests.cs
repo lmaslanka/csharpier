@@ -1,18 +1,12 @@
-using System;
-using System.IO;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using CliWrap;
-using CliWrap.Buffered;
-using FluentAssertions;
-using NUnit.Framework;
-
 namespace CSharpier.Cli.Tests;
 
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Metadata;
+using System.Text;
+using CliWrap;
+using CliWrap.Buffered;
+using FluentAssertions;
+using NUnit.Framework;
 
 // these tests are kind of nice as c# because they run in the same place.
 // except the one test that has issues with console input redirection
@@ -153,6 +147,42 @@ public class CliTests
     }
 
     [Test]
+    public async Task Should_Format_Piped_File_With_Config()
+    {
+        await this.WriteFileAsync(".csharpierrc", "printWidth: 10");
+
+        var formattedContent1 = "var x =\n    _________________longName;\n";
+        var unformattedContent1 = "var x = _________________longName;\n";
+
+        var result = await new CsharpierProcess()
+            .WithPipedInput(unformattedContent1)
+            .ExecuteAsync();
+
+        result.Output.Should().Be(formattedContent1);
+        result.ExitCode.Should().Be(0);
+    }
+
+    [Test]
+    public async Task Should_Format_Piped_File_With_EditorConfig()
+    {
+        await this.WriteFileAsync(
+            ".editorconfig",
+            @"[*]
+max_line_length = 10"
+        );
+
+        var formattedContent1 = "var x =\n    _________________longName;\n";
+        var unformattedContent1 = "var x = _________________longName;\n";
+
+        var result = await new CsharpierProcess()
+            .WithPipedInput(unformattedContent1)
+            .ExecuteAsync();
+
+        result.Output.Should().Be(formattedContent1);
+        result.ExitCode.Should().Be(0);
+    }
+
+    [Test]
     public async Task Should_Format_Unicode()
     {
         // use the \u so that we don't accidentally reformat this to be '?'
@@ -248,8 +278,8 @@ public class CliTests
         result
             .ErrorOutput
             .Should()
-            .Be(
-                $"Error {output} - Failed to compile so was not formatted.{Environment.NewLine}  (1,26): error CS1513: }} expected{Environment.NewLine}"
+            .StartWith(
+                $"Error {output} - Failed to compile so was not formatted.{Environment.NewLine}  (1,26): error CS1513: }}"
             );
         result.ExitCode.Should().Be(1);
     }

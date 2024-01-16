@@ -5,10 +5,20 @@ internal static class CollectionExpression
     public static Doc Print(CollectionExpressionSyntax node, FormattingContext context)
     {
         Doc separator = node.Parent
-            is AssignmentExpressionSyntax
-                or EqualsValueClauseSyntax { Parent: not PropertyDeclarationSyntax }
-            ? Doc.Line
-            : Doc.Null;
+            is ArgumentSyntax { NameColon: null }
+                or ArrowExpressionClauseSyntax
+                or ExpressionElementSyntax
+                or AssignmentExpressionSyntax
+                {
+                    Parent: not (
+                        ObjectCreationExpressionSyntax
+                        or InitializerExpressionSyntax
+                        or ExpressionStatementSyntax
+                    )
+                }
+                or EqualsValueClauseSyntax { Parent: not VariableDeclaratorSyntax }
+            ? Doc.Null
+            : Doc.IfBreak(Doc.Line, Doc.Null);
 
         var alwaysBreak =
             node.Elements.FirstOrDefault()
@@ -17,21 +27,29 @@ internal static class CollectionExpression
         var result = Doc.Concat(
             separator,
             Token.Print(node.OpenBracketToken, context),
-            Doc.Indent(
-                alwaysBreak ? Doc.HardLine : Doc.Line,
-                SeparatedSyntaxList.Print(
-                    node.Elements,
-                    Node.Print,
-                    alwaysBreak ? Doc.HardLine : Doc.Line,
-                    context
+            node.Elements.Any()
+                ? Doc.Indent(
+                    alwaysBreak ? Doc.HardLine : Doc.IfBreak(Doc.Line, Doc.Null),
+                    SeparatedSyntaxList.Print(
+                        node.Elements,
+                        Node.Print,
+                        alwaysBreak ? Doc.HardLine : Doc.Line,
+                        context
+                    )
                 )
-            ),
+                : Doc.Null,
             node.Elements.Any()
                 ? alwaysBreak
                     ? Doc.HardLine
-                    : Doc.Line
+                    : Doc.IfBreak(Doc.Line, Doc.Null)
                 : Doc.Null,
-            Token.Print(node.CloseBracketToken, context)
+            node.CloseBracketToken.LeadingTrivia.Any(o => o.IsComment() || o.IsDirective)
+                ? Doc.Concat(
+                    Doc.Indent(Token.PrintLeadingTrivia(node.CloseBracketToken, context)),
+                    Doc.HardLine
+                )
+                : Doc.Null,
+            Token.PrintWithoutLeadingTrivia(node.CloseBracketToken, context)
         );
         return Doc.Group(result);
     }
